@@ -1,12 +1,44 @@
 'use client';
 
-import { Menu, Save, Send, Clock, Monitor, Smartphone } from 'lucide-react';
+import { useState } from 'react';
+import { Menu, Save, Send, Clock, Monitor, Smartphone, Check } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useEditorStore } from '@/stores/editor-store';
+import { useDraftsStore } from '@/stores/drafts-store';
+import { generateId } from '@/lib/utils';
+import { Draft } from '@/types';
 
 export function TopBar() {
   const { toggleSidebar, setShowPublishModal } = useUIStore();
-  const { previewMode, setPreviewMode, isSaving } = useEditorStore();
+  const { previewMode, setPreviewMode, blocks, currentDraft } = useEditorStore();
+  const { addDraft, updateDraft } = useDraftsStore();
+  const [saved, setSaved] = useState(false);
+
+  function handleSave() {
+    const now = new Date().toISOString();
+    const title = blocks[0]?.content.slice(0, 50) || 'Untitled Thread';
+
+    if (currentDraft) {
+      updateDraft(currentDraft.id, { blocks, updated_at: now, title, version: currentDraft.version + 1 });
+    } else {
+      const newDraft: Draft = {
+        id: generateId(),
+        user_id: '',
+        title,
+        blocks,
+        status: 'draft',
+        tags: [],
+        created_at: now,
+        updated_at: now,
+        version: 1,
+      };
+      addDraft(newDraft);
+      useEditorStore.setState({ currentDraft: newDraft });
+    }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
     <header className="h-12 border-b border-[var(--border)] bg-[var(--bg)] flex items-center justify-between px-4">
@@ -15,7 +47,6 @@ export function TopBar() {
           <Menu size={18} />
         </button>
         <span className="text-sm font-semibold text-[var(--text)]">Threads Composer</span>
-        {isSaving && <span className="text-xs text-[var(--text-secondary)]">Saving...</span>}
       </div>
 
       <div className="flex items-center gap-2">
@@ -36,11 +67,12 @@ export function TopBar() {
           </button>
         </div>
 
-        <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]">
-          <Clock size={14} /> Schedule
-        </button>
-        <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]">
-          <Save size={14} /> Save
+        <button
+          onClick={handleSave}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+        >
+          {saved ? <Check size={14} className="text-[var(--success)]" /> : <Save size={14} />}
+          {saved ? 'Saved!' : 'Save'}
         </button>
         <button
           onClick={() => setShowPublishModal(true)}
