@@ -1,9 +1,8 @@
-import { updateSession } from '@/lib/supabase/middleware';
+import { NextResponse, type NextRequest } from 'next/server';
 import { addSecurityHeaders } from '@/lib/security/headers';
-import { type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request);
+  const response = NextResponse.next({ request });
   return addSecurityHeaders(response);
 }
 
