@@ -1,21 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditorStore } from '@/stores/editor-store';
 import { EditorBlock } from './editor-block';
-import { APP_CONFIG } from '@/config';
 import { AutoSplitter } from './auto-splitter';
+import { APP_CONFIG } from '@/config';
 
 export function ThreadEditor() {
   const { blocks, reorderBlocks, addBlock, undo, redo } = useEditorStore();
+  const [DndComponents, setDndComponents] = useState<any>(null);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Load DnD dynamically to prevent SSR issues
+  useEffect(() => {
+    Promise.all([
+      import('@dnd-kit/core'),
+      import('@dnd-kit/sortable'),
+    ]).then(([core, sortable]) => {
+      setDndComponents({ DndContext: core.DndContext, closestCenter: core.closestCenter, SortableContext: sortable.SortableContext, verticalListSortingStrategy: sortable.verticalListSortingStrategy });
+    }).catch(() => {});
+  }, []);
 
   // Auto-save
   useEffect(() => {
     autoSaveTimer.current = setInterval(() => {
-      // Trigger auto-save (handled by draft system)
       window.dispatchEvent(new CustomEvent('autosave'));
     }, APP_CONFIG.autoSaveInterval);
     return () => { if (autoSaveTimer.current) clearInterval(autoSaveTimer.current); };
@@ -34,7 +42,7 @@ export function ThreadEditor() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: any) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = blocks.findIndex(b => b.id === active.id);
@@ -42,6 +50,14 @@ export function ThreadEditor() {
       reorderBlocks(oldIndex, newIndex);
     }
   }, [blocks, reorderBlocks]);
+
+  const blockList = (
+    <div className="space-y-3">
+      {blocks.map((block, index) => (
+        <EditorBlock key={block.id} block={block} index={index} />
+      ))}
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -51,15 +67,13 @@ export function ThreadEditor() {
         className="w-full text-xl font-semibold bg-transparent border-none outline-none text-[var(--text)] placeholder:text-[var(--text-secondary)]/50 mb-6"
       />
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {blocks.map((block, index) => (
-              <EditorBlock key={block.id} block={block} index={index} />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {DndComponents ? (
+        <DndComponents.DndContext collisionDetection={DndComponents.closestCenter} onDragEnd={handleDragEnd}>
+          <DndComponents.SortableContext items={blocks.map(b => b.id)} strategy={DndComponents.verticalListSortingStrategy}>
+            {blockList}
+          </DndComponents.SortableContext>
+        </DndComponents.DndContext>
+      ) : blockList}
 
       <button
         onClick={() => addBlock()}

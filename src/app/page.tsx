@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { TopBar } from '@/components/layout/top-bar';
 import { ThreadEditor } from '@/components/editor/thread-editor';
@@ -11,7 +12,6 @@ import { AnalyticsDashboard } from '@/components/ui/analytics-dashboard';
 import { AIAssistant } from '@/components/ai/ai-assistant';
 import { PublishModal } from '@/components/ui/publish-modal';
 import { useUIStore } from '@/stores/ui-store';
-import { useAutoSave } from '@/hooks/use-auto-save';
 
 function SidebarContent() {
   const { sidebarTab } = useUIStore();
@@ -25,8 +25,18 @@ function SidebarContent() {
 }
 
 export default function DashboardPage() {
+  const [mounted, setMounted] = useState(false);
   const { sidebarOpen } = useUIStore();
-  useAutoSave();
+
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[var(--bg)]">
+        <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
