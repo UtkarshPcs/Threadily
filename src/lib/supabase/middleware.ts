@@ -7,6 +7,11 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-ke
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  // Skip auth check if Supabase isn't configured
+  if (supabaseUrl.includes('placeholder')) {
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() { return request.cookies.getAll(); },
@@ -20,15 +25,19 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
 
-  const publicRoutes = ['/login', '/signup', '/api/auth'];
-  const isPublic = publicRoutes.some(r => request.nextUrl.pathname.startsWith(r));
+    const publicRoutes = ['/login', '/signup', '/api/'];
+    const isPublic = publicRoutes.some(r => request.nextUrl.pathname.startsWith(r));
 
-  if (!user && !isPublic && !request.nextUrl.pathname.startsWith('/_next')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    if (!user && !isPublic) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    // If auth check fails, allow through
   }
 
   return supabaseResponse;
