@@ -23,6 +23,7 @@ const TemplatesPanel = dynamic(() => import('@/components/templates/templates-pa
 const IdeaInbox = dynamic(() => import('@/components/ui/idea-inbox').then(m => ({ default: m.IdeaInbox })), { ssr: false });
 const AnalyticsDashboard = dynamic(() => import('@/components/ui/analytics-dashboard').then(m => ({ default: m.AnalyticsDashboard })), { ssr: false });
 const AIAssistant = dynamic(() => import('@/components/ai/ai-assistant').then(m => ({ default: m.AIAssistant })), { ssr: false });
+const SettingsPanel = dynamic(() => import('@/components/ui/settings-panel').then(m => ({ default: m.SettingsPanel })), { ssr: false });
 
 function SidebarContent() {
   const { sidebarTab } = useUIStore();
@@ -31,7 +32,8 @@ function SidebarContent() {
     case 'templates': return <TemplatesPanel />;
     case 'ideas': return <IdeaInbox />;
     case 'analytics': return <AnalyticsDashboard />;
-    default: return <div className="p-3 text-xs text-[var(--text-secondary)]">Settings coming soon</div>;
+    case 'settings': return <SettingsPanel />;
+    default: return null;
   }
 }
 
